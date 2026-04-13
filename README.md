@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# X Bookmarks Manager
 
-## Getting Started
+基于 X API 的个人书签管理工具，自动抓取并智能归类用户的 X 书签内容。
 
-First, run the development server:
+## 启动项目
 
 ```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器（默认端口 3000）
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+浏览器打开 http://localhost:3000 即可使用。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 关闭项目
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 方式一：终端中直接关闭
 
-## Learn More
+在运行 `npm run dev` 的终端中按 `Ctrl + C`。
 
-To learn more about Next.js, take a look at the following resources:
+### 方式二：终端已关闭，进程仍在后台运行
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+如果关闭了终端但进程没有退出（端口仍被占用），手动查杀：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# 查看占用端口 3000 的进程
+lsof -i :3000 -P
 
-## Deploy on Vercel
+# 根据输出的 PID 杀掉进程
+kill <PID>
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# 如果 kill 无效，强制终止
+kill -9 <PID>
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 环境变量
+
+复制 `.env.example` 为 `.env.local`，填入 X Developer Portal 的 OAuth 凭证：
+
+```
+X_CLIENT_ID=你的 Client ID
+X_REDIRECT_URI=http://localhost:3000/api/auth/callback
+```
+
+## 技术栈
+
+- Next.js 16 (App Router, Turbopack)
+- TypeScript
+- Tailwind CSS v4
+- SQLite (better-sqlite3)
+- X API v2 (OAuth 2.0 PKCE)
+
+详细架构和功能说明见 `docs/` 目录。
