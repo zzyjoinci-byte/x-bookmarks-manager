@@ -1,3 +1,5 @@
+import { downloadAllMedia } from "./media";
+
 const BASE_URL = "https://api.x.com/2";
 
 interface TwitterUser {
@@ -55,6 +57,7 @@ export interface FetchedBookmark {
   author_username: string;
   created_at: string;
   media_urls: string;
+  local_media: string;
   raw_json: string;
 }
 
@@ -78,10 +81,10 @@ export async function fetchBookmarks(
   do {
     const params = new URLSearchParams({
       max_results: String(Math.min(maxResults, 100)),
-      "tweet.fields": "created_at,author_id,text,attachments,entities,lang",
+      "tweet.fields": "created_at,author_id,text,attachments,entities,lang,note_tweet,public_metrics,article",
       expansions: "author_id,attachments.media_keys",
-      "user.fields": "name,username",
-      "media.fields": "url,preview_image_url,type",
+      "user.fields": "name,username,profile_image_url",
+      "media.fields": "url,preview_image_url,type,width,height,alt_text",
     });
     if (paginationToken) {
       params.set("pagination_token", paginationToken);
@@ -136,6 +139,10 @@ export async function fetchBookmarks(
         }
       }
 
+      // Download media locally so bookmarks remain usable even if the
+      // original tweet or CDN asset goes away.
+      const localPaths = mediaUrls.length > 0 ? await downloadAllMedia(tweet.id, mediaUrls) : [];
+
       allBookmarks.push({
         id: tweet.id,
         text: tweet.text,
@@ -144,6 +151,7 @@ export async function fetchBookmarks(
         author_username: author?.username || "unknown",
         created_at: tweet.created_at || "",
         media_urls: JSON.stringify(mediaUrls),
+        local_media: JSON.stringify(localPaths),
         raw_json: JSON.stringify(tweet),
       });
     }

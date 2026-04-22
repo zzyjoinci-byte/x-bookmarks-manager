@@ -25,6 +25,7 @@ function initTables(db: Database.Database) {
       created_at TEXT,
       category TEXT DEFAULT 'uncategorized',
       media_urls TEXT DEFAULT '[]',
+      local_media TEXT DEFAULT '[]',
       bookmarked_at TEXT DEFAULT (datetime('now')),
       raw_json TEXT
     );
@@ -35,12 +36,38 @@ function initTables(db: Database.Database) {
       keywords TEXT NOT NULL,
       priority INTEGER DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      access_token TEXT NOT NULL,
+      refresh_token TEXT,
+      expires_at INTEGER NOT NULL,
+      user_id TEXT,
+      username TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS link_previews (
+      url TEXT PRIMARY KEY,
+      final_url TEXT,
+      title TEXT,
+      description TEXT,
+      image TEXT,
+      site_name TEXT,
+      excerpt TEXT,
+      status TEXT,
+      fetched_at INTEGER
+    );
   `);
 
-  // Migrate: add media_urls column if missing
+  // Migrate: add columns if missing
   const columns = db.prepare("PRAGMA table_info(bookmarks)").all() as { name: string }[];
-  if (!columns.some((c) => c.name === "media_urls")) {
+  const hasColumn = (name: string) => columns.some((c) => c.name === name);
+  if (!hasColumn("media_urls")) {
     db.exec("ALTER TABLE bookmarks ADD COLUMN media_urls TEXT DEFAULT '[]'");
+  }
+  if (!hasColumn("local_media")) {
+    db.exec("ALTER TABLE bookmarks ADD COLUMN local_media TEXT DEFAULT '[]'");
   }
 
   // Seed default rules if empty
@@ -77,6 +104,7 @@ export interface Bookmark {
   created_at: string;
   category: string;
   media_urls: string;
+  local_media: string;
   bookmarked_at: string;
   raw_json: string;
 }
@@ -84,14 +112,15 @@ export interface Bookmark {
 export function upsertBookmark(bookmark: Omit<Bookmark, "bookmarked_at">) {
   const db = getDb();
   db.prepare(`
-    INSERT INTO bookmarks (id, text, author_id, author_name, author_username, created_at, category, media_urls, raw_json)
-    VALUES (@id, @text, @author_id, @author_name, @author_username, @created_at, @category, @media_urls, @raw_json)
+    INSERT INTO bookmarks (id, text, author_id, author_name, author_username, created_at, category, media_urls, local_media, raw_json)
+    VALUES (@id, @text, @author_id, @author_name, @author_username, @created_at, @category, @media_urls, @local_media, @raw_json)
     ON CONFLICT(id) DO UPDATE SET
       text = @text,
       author_name = @author_name,
       author_username = @author_username,
       category = @category,
       media_urls = @media_urls,
+      local_media = @local_media,
       raw_json = @raw_json
   `).run(bookmark);
 }
@@ -113,6 +142,112 @@ export function getExistingIds(): Set<string> {
 export function updateBookmarkMedia(id: string, mediaUrls: string) {
   const db = getDb();
   db.prepare("UPDATE bookmarks SET media_urls = ? WHERE id = ?").run(mediaUrls, id);
+}
+
+export function updateBookmarkLocalMedia(id: string, localMedia: string) {
+  const db = getDb();
+  db.prepare("UPDATE bookmarks SET local_media = ? WHERE id = ?").run(localMedia, id);
+}
+
+export function updateBookmarkRawJson(id: string, rawJson: string) {
+  const db = getDb();
+  db.prepare("UPDATE bookmarks SET raw_json = ? WHERE id = ?").run(rawJson, id);
+}
+
+export function getAllBookmarkIds(): string[] {
+  const db = getDb();
+  const rows = db.prepare("SELECT id FROM bookmarks").all() as { id: string }[];
+  return rows.map((r) => r.id);
+}
+
+export function getBookmarkById(id: string): Bookmark | undefined {
+  const db = getDb();
+  return db.prepare("SELECT * FROM bookmarks WHERE id = ?").get(id) as Bookmark | undefined;
+}
+
+// --- Auth tokens ---
+
+export interface StoredAuthToken {
+  access_token: string;
+  refresh_token: string | null;
+  expires_at: number;
+  user_id: string | null;
+  username: string | null;
+}
+
+export function saveAuthToken(token: StoredAuthToken) {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO auth_tokens (id, access_token, refresh_token, expires_at, user_id, username, updated_at)
+    VALUES (1, @access_token, @refresh_token, @expires_at, @user_id, @username, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      access_token = @access_token,
+      refresh_token = @refresh_token,
+      expires_at = @expires_at,
+      user_id = COALESCE(@user_id, user_id),
+      username = COALESCE(@username, username),
+      updated_at = datetime('now')
+  `).run(token);
+}
+
+export function loadAuthToken(): StoredAuthToken | null {
+  const db = getDb();
+  const row = db.prepare("SELECT access_token, refresh_token, expires_at, user_id, username FROM auth_tokens WHERE id = 1").get() as StoredAuthToken | undefined;
+  return row || null;
+}
+
+export function clearAuthToken() {
+  const db = getDb();
+  db.prepare("DELETE FROM auth_tokens WHERE id = 1").run();
+}
+
+// --- Link previews ---
+
+export interface LinkPreview {
+  url: string;
+  final_url: string | null;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  site_name: string | null;
+  excerpt: string | null;
+  status: string;
+  fetched_at: number;
+}
+
+export function upsertLinkPreview(preview: LinkPreview) {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO link_previews (url, final_url, title, description, image, site_name, excerpt, status, fetched_at)
+    VALUES (@url, @final_url, @title, @description, @image, @site_name, @excerpt, @status, @fetched_at)
+    ON CONFLICT(url) DO UPDATE SET
+      final_url = @final_url,
+      title = @title,
+      description = @description,
+      image = @image,
+      site_name = @site_name,
+      excerpt = @excerpt,
+      status = @status,
+      fetched_at = @fetched_at
+  `).run(preview);
+}
+
+export function getLinkPreviews(urls: string[]): Record<string, LinkPreview> {
+  if (urls.length === 0) return {};
+  const db = getDb();
+  const placeholders = urls.map(() => "?").join(",");
+  const rows = db
+    .prepare(`SELECT * FROM link_previews WHERE url IN (${placeholders})`)
+    .all(...urls) as LinkPreview[];
+  const result: Record<string, LinkPreview> = {};
+  for (const row of rows) result[row.url] = row;
+  return result;
+}
+
+export function hasLinkPreview(url: string): boolean {
+  const db = getDb();
+  const row = db.prepare("SELECT 1 FROM link_previews WHERE url = ?").get(url);
+  return !!row;
 }
 
 export function updateBookmarkCategory(id: string, category: string) {
@@ -175,6 +310,13 @@ export function getAllBookmarksForClassify(): BookmarkForClassify[] {
   return db
     .prepare("SELECT id, text, author_name, author_username, raw_json FROM bookmarks")
     .all() as BookmarkForClassify[];
+}
+
+export function getAllBookmarksForMedia(): Array<{ id: string; media_urls: string; local_media: string }> {
+  const db = getDb();
+  return db
+    .prepare("SELECT id, media_urls, local_media FROM bookmarks")
+    .all() as Array<{ id: string; media_urls: string; local_media: string }>;
 }
 
 export function batchUpdateCategories(updates: { id: string; category: string }[]) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/language-context";
+
 interface CategoryFilterProps {
   categories: string[];
   counts: Record<string, number>;
@@ -26,6 +28,7 @@ export default function CategoryFilter({
   selected,
   onSelect,
 }: CategoryFilterProps) {
+  const { t, categoryLabel } = useT();
   const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
@@ -34,11 +37,11 @@ export default function CategoryFilter({
         onClick={() => onSelect("all")}
         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
           selected === "all"
-            ? "bg-gray-900 text-white"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
         }`}
       >
-        All ({totalCount})
+        {t("all")} ({totalCount})
       </button>
       {categories.map((cat) => {
         const dotColor = CATEGORY_COLORS[cat] || "bg-gray-400";
@@ -49,12 +52,12 @@ export default function CategoryFilter({
             onClick={() => onSelect(cat)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
               isActive
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${isActive ? "bg-white" : dotColor}`} />
-            {cat === "uncategorized" ? "未分类" : cat} ({counts[cat] || 0})
+            {categoryLabel(cat)} ({counts[cat] || 0})
           </button>
         );
       })}

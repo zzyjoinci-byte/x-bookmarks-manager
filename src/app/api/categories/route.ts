@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCategoryRules, addCategoryRule, deleteCategoryRule } from "@/lib/db";
+import { getBuiltinRuleSummaries } from "@/lib/classifier";
 
 export async function GET() {
   const rules = getCategoryRules();
-  return NextResponse.json({ rules });
+  const builtins = getBuiltinRuleSummaries();
+  return NextResponse.json({ rules, builtins });
 }
 
 export async function POST(req: NextRequest) {
@@ -13,7 +15,8 @@ export async function POST(req: NextRequest) {
   }
   addCategoryRule(category, keywords, priority || 0);
   const rules = getCategoryRules();
-  return NextResponse.json({ rules });
+  const builtins = getBuiltinRuleSummaries();
+  return NextResponse.json({ rules, builtins });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -23,5 +26,6 @@ export async function DELETE(req: NextRequest) {
   }
   deleteCategoryRule(id);
   const rules = getCategoryRules();
-  return NextResponse.json({ rules });
+  const builtins = getBuiltinRuleSummaries();
+  return NextResponse.json({ rules, builtins });
 }

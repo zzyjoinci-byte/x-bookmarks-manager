@@ -41,6 +41,12 @@ yarn-error.log*
 /data/*.db-shm
 /data/*.db-wal
 
+# local media cache (downloaded by Backfill Media)
+/data/media/
+
+# personal iteration notes
+/迭代訴求.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

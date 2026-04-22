@@ -476,3 +476,23 @@ export function classifyMany(
     category: classify(item),
   }));
 }
+
+export interface BuiltinRuleSummary {
+  category: string;
+  priority: number;
+  strong: string[];
+  keywords: string[];
+  urlKeywords: string[];
+  authorKeywords: string[];
+}
+
+export function getBuiltinRuleSummaries(): BuiltinRuleSummary[] {
+  return BUILTIN_RULES.map((r) => ({
+    category: r.category,
+    priority: r.priority,
+    strong: r.strong,
+    keywords: r.keywords,
+    urlKeywords: r.urlKeywords || [],
+    authorKeywords: r.authorKeywords || [],
+  }));
+}
