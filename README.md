@@ -14,10 +14,25 @@ npm run dev
 
 浏览器打开 http://localhost:3000 即可使用。
 
+## Mobile app
+
+The current mobile app lives in `mobile/` and uses Expo React Native so the same UI code can target Android and iOS.
+
+```bash
+npm run mobile:android
+```
+
+For validation:
+
+```bash
+npm run mobile:typecheck
+cd mobile && npx expo-doctor
+```
+
 ## Mobile cloud backend
 
-The repository also contains an Android-first mobile implementation under `android/`.
-The mobile app uses the cloud API under `/api/mobile/*`, backed by Supabase Postgres.
+The repository also contains the earlier Android-native proof of concept under `android/`.
+Both mobile clients use the cloud API under `/api/mobile/*`, backed by Supabase Postgres.
 
 Setup details:
 
