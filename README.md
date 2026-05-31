@@ -26,6 +26,7 @@ For validation:
 
 ```bash
 npm run mobile:typecheck
+npm run mobile:check
 cd mobile && npx expo-doctor
 ```
 

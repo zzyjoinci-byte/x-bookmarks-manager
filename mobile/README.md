@@ -48,7 +48,10 @@ The cloud callback exchanges the X token server-side, creates a one-time mobile 
 ```bash
 npm run typecheck
 npx expo-doctor
+npm run check
 ```
+
+`npm run check` also validates that Expo can resolve the public app config, including Android package, iOS bundle identifier, and URL scheme.
 
 ## EAS builds
 

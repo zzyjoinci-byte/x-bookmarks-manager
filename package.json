@@ -9,7 +9,9 @@
     "lint": "eslint",
     "mobile": "npm --prefix mobile run start",
     "mobile:android": "npm --prefix mobile run android",
-    "mobile:typecheck": "npm --prefix mobile run typecheck"
+    "mobile:android:build": "npm --prefix mobile run android:build",
+    "mobile:typecheck": "npm --prefix mobile run typecheck",
+    "mobile:check": "npm --prefix mobile run check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
