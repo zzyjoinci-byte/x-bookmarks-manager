@@ -108,7 +108,12 @@ export default function App() {
   }
 
   async function handleAuthRedirect(url: string) {
-    void WebBrowser.dismissBrowser().catch(() => undefined);
+    try {
+      WebBrowser.dismissBrowser();
+    } catch {
+      // Some platforms do not keep an auth browser open after the redirect.
+    }
+
     const parsed = Linking.parse(url);
     const rawCode = parsed.queryParams?.code;
     const code = Array.isArray(rawCode) ? rawCode[0] : rawCode;
