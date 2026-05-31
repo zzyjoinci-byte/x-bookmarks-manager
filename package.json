@@ -10,6 +10,7 @@
     "mobile": "npm --prefix mobile run start",
     "mobile:android": "npm --prefix mobile run android",
     "mobile:android:build": "npm --prefix mobile run android:build",
+    "mobile:android:preview": "npm --prefix mobile run android:preview",
     "mobile:typecheck": "npm --prefix mobile run typecheck",
     "mobile:check": "npm --prefix mobile run check"
   },

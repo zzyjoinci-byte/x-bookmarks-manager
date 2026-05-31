@@ -10,12 +10,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
   FlatList,
+  LogBox,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +44,7 @@ import { colors, radii } from "./src/theme";
 import type { BookmarkDto, Screen, UserDto } from "./src/types";
 
 WebBrowser.maybeCompleteAuthSession();
+LogBox.ignoreLogs(["Cannot connect to Expo CLI.", "VirtualizedList: You have a large list"]);
 
 const PRIVACY_URL = "https://x-bookmarks-manager.vercel.app/privacy";
 const REDIRECT_URL = "bookmarkfold://auth";
@@ -417,10 +419,15 @@ function LoginScreen({
       <Text style={styles.loginCopy}>
         Sync your saved X posts, classify them automatically, and read them like a curated field notebook.
       </Text>
-      <Pressable disabled={busy} onPress={onLogin} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+      <Pressable
+        disabled={busy}
+        focusable={false}
+        onPress={onLogin}
+        style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+      >
         {busy ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.primaryButtonText}>Sign in with X</Text>}
       </Pressable>
-      <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.linkButton}>
+      <Pressable focusable={false} onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.linkButton}>
         <Text style={styles.linkButtonText}>Privacy Policy</Text>
       </Pressable>
       {message ? <Text style={styles.inlineMessage}>{message}</Text> : null}
@@ -452,6 +459,13 @@ function FeedScreen(props: {
       keyExtractor={(item) => item.id}
       style={styles.feedListView}
       contentContainerStyle={styles.feedList}
+      decelerationRate="normal"
+      initialNumToRender={5}
+      maxToRenderPerBatch={4}
+      removeClippedSubviews
+      scrollEventThrottle={16}
+      updateCellsBatchingPeriod={80}
+      windowSize={5}
       ListHeaderComponent={
         <View>
           <View style={styles.feedHeader}>
@@ -462,7 +476,7 @@ function FeedScreen(props: {
                 {compactNumber(props.allCount)} saved posts · cloud library
               </Text>
             </View>
-            <Pressable onPress={props.onSync} disabled={props.busy} style={styles.syncButton}>
+            <Pressable focusable={false} onPress={props.onSync} disabled={props.busy} style={styles.syncButton}>
               <Text style={styles.syncButtonText}>{props.busy ? "..." : "Sync"}</Text>
             </Pressable>
           </View>
@@ -473,6 +487,9 @@ function FeedScreen(props: {
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
             autoCapitalize="none"
+            blurOnSubmit
+            focusable={false}
+            returnKeyType="search"
           />
           <CategoryRail
             counts={props.counts}
@@ -547,7 +564,7 @@ function CategoryChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, selected && styles.chipSelected]}>
+    <Pressable focusable={false} onPress={onPress} style={[styles.chip, selected && styles.chipSelected]}>
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
         {label} {typeof count === "number" ? compactNumber(count) : ""}
       </Text>
@@ -555,7 +572,7 @@ function CategoryChip({
   );
 }
 
-function BookmarkCard({
+const BookmarkCard = memo(function BookmarkCard({
   bookmark,
   index,
   onPress,
@@ -567,7 +584,7 @@ function BookmarkCard({
   const hasImage = bookmark.media_urls.length > 0;
   const accent = index % 3 === 0 ? colors.acid : index % 3 === 1 ? "#FFD7C8" : "#DDE9FF";
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.cardWrap, pressed && styles.pressed]}>
+    <Pressable focusable={false} onPress={onPress} style={styles.cardWrap}>
       <View style={[styles.cardAccent, { backgroundColor: accent }]} />
       <View style={styles.card}>
         <View style={styles.cardMetaRow}>
@@ -592,7 +609,7 @@ function BookmarkCard({
       </View>
     </Pressable>
   );
-}
+});
 
 function DetailScreen({
   bookmark,
@@ -612,10 +629,10 @@ function DetailScreen({
   return (
     <ScrollView contentContainerStyle={styles.detail}>
       <View style={styles.detailTop}>
-        <Pressable onPress={onBack} style={styles.secondaryButton}>
+        <Pressable focusable={false} onPress={onBack} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Back</Text>
         </Pressable>
-        <Pressable onPress={onOpenX} style={styles.secondaryButtonDark}>
+        <Pressable focusable={false} onPress={onOpenX} style={styles.secondaryButtonDark}>
           <Text style={styles.secondaryButtonDarkText}>Open X</Text>
         </Pressable>
       </View>
@@ -660,13 +677,18 @@ function CategoriesScreen({
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.smallCaps}>Library map</Text>
       <Text style={styles.pageTitle}>Categories</Text>
-      <Pressable onPress={() => onSelectCategory(null)} style={[styles.categoryTile, !selectedCategory && styles.tileSelected]}>
+      <Pressable
+        focusable={false}
+        onPress={() => onSelectCategory(null)}
+        style={[styles.categoryTile, !selectedCategory && styles.tileSelected]}
+      >
         <Text style={styles.tileName}>All saved posts</Text>
         <Text style={styles.tileCount}>{compactNumber(allCount)}</Text>
       </Pressable>
       {categories.map((item) => (
         <Pressable
           key={item}
+          focusable={false}
           onPress={() => onSelectCategory(item)}
           style={[styles.categoryTile, selectedCategory === item && styles.tileSelected]}
         >
@@ -674,7 +696,7 @@ function CategoriesScreen({
           <Text style={styles.tileCount}>{compactNumber(counts[item] || 0)}</Text>
         </Pressable>
       ))}
-      <Pressable onPress={onReclassify} style={styles.wideAction}>
+      <Pressable focusable={false} onPress={onReclassify} style={styles.wideAction}>
         <Text style={styles.wideActionText}>Reclassify all bookmarks</Text>
       </Pressable>
     </ScrollView>
@@ -731,7 +753,7 @@ function SettingsRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={styles.settingsRow}>
+    <Pressable focusable={false} onPress={onPress} disabled={disabled} style={styles.settingsRow}>
       <View>
         <Text style={[styles.settingsLabel, destructive && styles.destructive]}>{label}</Text>
         <Text style={styles.settingsDetail}>{detail}</Text>
@@ -755,7 +777,7 @@ function BottomNav({ screen, onChange }: { screen: Screen; onChange: (screen: Sc
 
 function NavItem({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.navItem}>
+    <Pressable focusable={false} onPress={onPress} style={styles.navItem}>
       <View style={[styles.navIndicator, active && styles.navIndicatorActive]} />
       <Text style={[styles.navText, active && styles.navTextActive]}>{label}</Text>
     </Pressable>

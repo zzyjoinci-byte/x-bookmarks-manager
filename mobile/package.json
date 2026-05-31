@@ -30,6 +30,7 @@
     "android:prebuild": "expo prebuild --platform android",
     "android:build": "bash scripts/android-build.sh",
     "android:install": "bash scripts/android-install.sh",
+    "android:preview": "bash scripts/android-preview.sh",
     "android:reinstall": "bash scripts/android-reinstall.sh",
     "android:go": "expo start --android",
     "ios": "expo run:ios",
