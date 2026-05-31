@@ -27,6 +27,9 @@
 /android/app/build/
 /android/local.properties
 
+# supabase local link/cache state
+/supabase/.temp/
+
 # misc
 .DS_Store
 *.pem
