@@ -1,6 +1,12 @@
-import { getCategoryRules, type BookmarkForClassify } from "./db";
+import type { BookmarkForClassify } from "./db";
 
 type ClassifiableBookmark = Partial<BookmarkForClassify> & { text: string };
+
+export interface CategoryRuleLike {
+  category: string;
+  keywords: string;
+  priority: number;
+}
 
 interface NormalizedSignalBag {
   mainText: string;
@@ -441,7 +447,10 @@ function scoreCustomRule(
   return priority * 3 + mainMatches * 12 + urlMatches * 8 + authorMatches * 3 + totalMatches;
 }
 
-export function classify(bookmark: ClassifiableBookmark | string): string {
+export function classify(
+  bookmark: ClassifiableBookmark | string,
+  customRules: CategoryRuleLike[] = []
+): string {
   const item: ClassifiableBookmark =
     typeof bookmark === "string" ? { text: bookmark } : bookmark;
 
@@ -457,7 +466,7 @@ export function classify(bookmark: ClassifiableBookmark | string): string {
     }
   }
 
-  for (const customRule of getCategoryRules()) {
+  for (const customRule of customRules) {
     const score = scoreCustomRule(customRule.keywords, customRule.priority, signals);
     if (score > bestScore) {
       bestCategory = customRule.category;
@@ -469,11 +478,12 @@ export function classify(bookmark: ClassifiableBookmark | string): string {
 }
 
 export function classifyMany(
-  items: ClassifiableBookmark[]
+  items: ClassifiableBookmark[],
+  customRules: CategoryRuleLike[] = []
 ): { id: string; category: string }[] {
   return items.map((item) => ({
     id: item.id || "",
-    category: classify(item),
+    category: classify(item, customRules),
   }));
 }
 

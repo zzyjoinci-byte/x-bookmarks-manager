@@ -67,6 +67,87 @@ export interface FetchResult {
   stoppedEarly: boolean;
 }
 
+export interface CloudBookmarksPage {
+  user: TwitterUser;
+  bookmarks: FetchedBookmark[];
+  nextCursor: string | null;
+}
+
+function buildBookmarksParams(maxResults: number, paginationToken?: string) {
+  const params = new URLSearchParams({
+    max_results: String(Math.min(maxResults, 100)),
+    "tweet.fields": "created_at,author_id,text,attachments,entities,lang,note_tweet,public_metrics,article",
+    expansions: "author_id,attachments.media_keys",
+    "user.fields": "name,username,profile_image_url",
+    "media.fields": "url,preview_image_url,type,width,height,alt_text",
+  });
+  if (paginationToken) params.set("pagination_token", paginationToken);
+  return params;
+}
+
+function bookmarksFromResponse(json: BookmarksResponse): FetchedBookmark[] {
+  if (!json.data) return [];
+
+  const usersMap = new Map<string, TwitterUser>();
+  if (json.includes?.users) {
+    for (const u of json.includes.users) usersMap.set(u.id, u);
+  }
+
+  const mediaMap = new Map<string, TwitterMedia>();
+  if (json.includes?.media) {
+    for (const m of json.includes.media) mediaMap.set(m.media_key, m);
+  }
+
+  return json.data.map((tweet) => {
+    const author = usersMap.get(tweet.author_id || "");
+    const mediaUrls: string[] = [];
+    if (tweet.attachments?.media_keys) {
+      for (const key of tweet.attachments.media_keys) {
+        const media = mediaMap.get(key);
+        const imgUrl = media?.url || media?.preview_image_url;
+        if (imgUrl) mediaUrls.push(imgUrl);
+      }
+    }
+
+    return {
+      id: tweet.id,
+      text: tweet.text,
+      author_id: tweet.author_id || "",
+      author_name: author?.name || "Unknown",
+      author_username: author?.username || "unknown",
+      created_at: tweet.created_at || "",
+      media_urls: JSON.stringify(mediaUrls),
+      local_media: "[]",
+      raw_json: JSON.stringify(tweet),
+    };
+  });
+}
+
+export async function fetchBookmarksPage(
+  accessToken: string,
+  paginationToken?: string,
+  maxResults: number = 100
+): Promise<CloudBookmarksPage> {
+  const user = await getMe(accessToken);
+  const params = buildBookmarksParams(maxResults, paginationToken);
+  const url = `${BASE_URL}/users/${user.id}/bookmarks?${params}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to fetch bookmarks: ${res.status} ${body}`);
+  }
+
+  const json: BookmarksResponse = await res.json();
+  return {
+    user,
+    bookmarks: bookmarksFromResponse(json),
+    nextCursor: json.meta?.next_token || null,
+  };
+}
+
 export async function fetchBookmarks(
   accessToken: string,
   existingIds: Set<string>,
@@ -79,16 +160,7 @@ export async function fetchBookmarks(
   let stoppedEarly = false;
 
   do {
-    const params = new URLSearchParams({
-      max_results: String(Math.min(maxResults, 100)),
-      "tweet.fields": "created_at,author_id,text,attachments,entities,lang,note_tweet,public_metrics,article",
-      expansions: "author_id,attachments.media_keys",
-      "user.fields": "name,username,profile_image_url",
-      "media.fields": "url,preview_image_url,type,width,height,alt_text",
-    });
-    if (paginationToken) {
-      params.set("pagination_token", paginationToken);
-    }
+    const params = buildBookmarksParams(maxResults, paginationToken);
 
     const url = `${BASE_URL}/users/${user.id}/bookmarks?${params}`;
     const res = await fetch(url, {
@@ -105,55 +177,20 @@ export async function fetchBookmarks(
 
     if (!json.data) break;
 
-    const usersMap = new Map<string, TwitterUser>();
-    if (json.includes?.users) {
-      for (const u of json.includes.users) {
-        usersMap.set(u.id, u);
-      }
-    }
-
-    const mediaMap = new Map<string, TwitterMedia>();
-    if (json.includes?.media) {
-      for (const m of json.includes.media) {
-        mediaMap.set(m.media_key, m);
-      }
-    }
-
     let knownCount = 0;
 
-    for (const tweet of json.data) {
-      if (existingIds.has(tweet.id)) {
+    for (const bookmark of bookmarksFromResponse(json)) {
+      if (existingIds.has(bookmark.id)) {
         knownCount++;
         continue;
       }
 
-      const author = usersMap.get(tweet.author_id || "");
-      const mediaUrls: string[] = [];
-      if (tweet.attachments?.media_keys) {
-        for (const key of tweet.attachments.media_keys) {
-          const media = mediaMap.get(key);
-          if (media) {
-            const imgUrl = media.url || media.preview_image_url;
-            if (imgUrl) mediaUrls.push(imgUrl);
-          }
-        }
-      }
-
       // Download media locally so bookmarks remain usable even if the
       // original tweet or CDN asset goes away.
-      const localPaths = mediaUrls.length > 0 ? await downloadAllMedia(tweet.id, mediaUrls) : [];
+      const mediaUrls = JSON.parse(bookmark.media_urls) as string[];
+      const localPaths = mediaUrls.length > 0 ? await downloadAllMedia(bookmark.id, mediaUrls) : [];
 
-      allBookmarks.push({
-        id: tweet.id,
-        text: tweet.text,
-        author_id: tweet.author_id || "",
-        author_name: author?.name || "Unknown",
-        author_username: author?.username || "unknown",
-        created_at: tweet.created_at || "",
-        media_urls: JSON.stringify(mediaUrls),
-        local_media: JSON.stringify(localPaths),
-        raw_json: JSON.stringify(tweet),
-      });
+      allBookmarks.push({ ...bookmark, local_media: JSON.stringify(localPaths) });
     }
 
     // If all items in this page are already known, stop pagination

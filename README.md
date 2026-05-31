@@ -14,6 +14,20 @@ npm run dev
 
 浏览器打开 http://localhost:3000 即可使用。
 
+## Mobile cloud backend
+
+The repository also contains an Android-first mobile implementation under `android/`.
+The mobile app uses the cloud API under `/api/mobile/*`, backed by Supabase Postgres.
+
+Setup details:
+
+- Run `supabase/schema.sql` in Supabase.
+- Deploy this Next.js app to Vercel.
+- Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `X_CLIENT_ID`, `X_REDIRECT_URI`, and `MOBILE_APP_REDIRECT_URI`.
+- Open `android/` in Android Studio and build with `-PAPI_BASE_URL=https://your-vercel-domain.vercel.app/`.
+
+See `docs/mobile-cloud-setup.md`.
+
 ## 关闭项目
 
 ### 方式一：终端中直接关闭

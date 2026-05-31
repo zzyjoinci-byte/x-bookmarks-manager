@@ -20,6 +20,13 @@
 # production
 /build
 
+# android
+/android/.gradle/
+/android/.idea/
+/android/build/
+/android/app/build/
+/android/local.properties
+
 # misc
 .DS_Store
 *.pem

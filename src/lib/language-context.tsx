@@ -31,6 +31,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const attr = document.documentElement.getAttribute("data-lang");
     if (attr === "zh" || attr === "en") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLangState(attr);
     }
   }, []);

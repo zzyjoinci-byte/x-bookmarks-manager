@@ -4,6 +4,7 @@ import {
   batchUpdateCategories,
   getBookmarks,
   getBookmarkCount,
+  getCategoryRules,
   getLinkPreviews,
 } from "@/lib/db";
 import { classifyMany } from "@/lib/classifier";
@@ -12,7 +13,7 @@ import { parseRawTweet, collectExternalUrls } from "@/lib/bookmark-shape";
 // POST /api/classify — re-classify all bookmarks
 export async function POST() {
   const items = getAllBookmarksForClassify();
-  const updates = classifyMany(items);
+  const updates = classifyMany(items, getCategoryRules());
   batchUpdateCategories(updates);
   const bookmarks = getBookmarks();
   const counts = getBookmarkCount();

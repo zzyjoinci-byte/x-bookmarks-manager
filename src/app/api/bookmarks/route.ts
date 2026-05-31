@@ -7,6 +7,7 @@ import {
   getBookmarkCount,
   getExistingIds,
   getAllCategoryNames,
+  getCategoryRules,
   getLinkPreviews,
   type Bookmark,
 } from "@/lib/db";
@@ -47,7 +48,7 @@ export async function POST() {
     const result = await fetchBookmarks(token, existingIds);
 
     for (const bm of result.bookmarks) {
-      const category = classify(bm);
+      const category = classify(bm, getCategoryRules());
       upsertBookmark({ ...bm, category });
     }
 

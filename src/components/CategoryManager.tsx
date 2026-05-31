@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/lib/language-context";
 
 interface CategoryRule {
@@ -33,16 +33,17 @@ export default function CategoryManager({ open, onClose, onRulesChange }: Catego
   const [newKeywords, setNewKeywords] = useState("");
   const [newPriority, setNewPriority] = useState(5);
 
-  useEffect(() => {
-    if (open) loadRules();
-  }, [open]);
-
-  async function loadRules() {
+  const loadRules = useCallback(async () => {
     const res = await fetch("/api/categories");
     const data = await res.json();
     setRules(data.rules || []);
     setBuiltins(data.builtins || []);
-  }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open) loadRules();
+  }, [open, loadRules]);
 
   async function handleAdd() {
     if (!newCategory.trim() || !newKeywords.trim()) return;

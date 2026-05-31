@@ -79,6 +79,7 @@ export default function BookmarkDetail({
   const [expandedExcerpts, setExpandedExcerpts] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -94,6 +95,7 @@ export default function BookmarkDetail({
   }, [bookmark, onClose]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowDropdown(false);
     setExpandedExcerpts({});
   }, [bookmark?.id]);
