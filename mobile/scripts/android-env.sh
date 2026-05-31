@@ -29,3 +29,8 @@ if ! command -v adb >/dev/null 2>&1; then
   echo "adb not found. Install Android SDK platform-tools or set ANDROID_HOME." >&2
   exit 1
 fi
+
+if ! command -v npx >/dev/null 2>&1; then
+  echo "npx not found. Install Node.js/npm." >&2
+  exit 1
+fi

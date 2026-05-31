@@ -10,6 +10,7 @@ npm run android
 ```
 
 `npm run android` creates/runs a development build, which is required for the `bookmarkfold://auth` OAuth callback scheme.
+It uses `scripts/android-run.sh` so Java, Android SDK, and adb are resolved consistently from VS Code, Codex, or a normal terminal.
 
 If the first Android build appears stuck in Kotlin/Gradle, use the deterministic build path:
 
