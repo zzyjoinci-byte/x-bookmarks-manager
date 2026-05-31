@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   FlatList,
   Pressable,
   ScrollView,
@@ -84,6 +85,21 @@ export default function App() {
   useEffect(() => {
     void bootstrap();
   }, []);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (selected) {
+        setSelected(null);
+        return true;
+      }
+      if (screen !== "feed") {
+        setScreen("feed");
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [screen, selected]);
 
   const allCount = useMemo(() => Object.values(counts).reduce((sum, item) => sum + item, 0), [counts]);
   const visibleCategory = category || "All";
@@ -324,53 +340,55 @@ export default function App() {
             />
           ) : (
             <View style={styles.main}>
-              {screen === "feed" ? (
-                <FeedScreen
-                  bookmarks={bookmarks}
-                  counts={counts}
-                  categories={categories}
-                  selectedCategory={category}
-                  query={query}
-                  allCount={allCount}
-                  visibleCategory={visibleCategory}
-                  nextCursor={nextCursor}
-                  busy={busy}
-                  loadingMore={loadingMore}
-                  message={message}
-                  onSync={syncAll}
-                  onSelectCategory={chooseCategory}
-                  onOpenBookmark={loadBookmarkDetail}
-                  onSearch={search}
-                  onLoadMore={() => refreshBookmarks({ cursor: nextCursor })}
-                />
-              ) : null}
-              {screen === "categories" ? (
-                <CategoriesScreen
-                  allCount={allCount}
-                  counts={counts}
-                  categories={categories}
-                  selectedCategory={category}
-                  onSelectCategory={chooseCategory}
-                  onReclassify={reclassifyAll}
-                />
-              ) : null}
-              {screen === "me" ? (
-                <MeScreen
-                  user={user}
-                  message={message}
-                  busy={busy}
-                  apiBaseUrl={API_BASE_URL}
-                  onSync={syncAll}
-                  onReclassify={reclassifyAll}
-                  onPrivacy={() => Linking.openURL(PRIVACY_URL)}
-                  onLogout={() => {
-                    Alert.alert("Log out?", "This only removes the local app session.", [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Log out", style: "destructive", onPress: logout },
-                    ]);
-                  }}
-                />
-              ) : null}
+              <View style={styles.screenBody}>
+                {screen === "feed" ? (
+                  <FeedScreen
+                    bookmarks={bookmarks}
+                    counts={counts}
+                    categories={categories}
+                    selectedCategory={category}
+                    query={query}
+                    allCount={allCount}
+                    visibleCategory={visibleCategory}
+                    nextCursor={nextCursor}
+                    busy={busy}
+                    loadingMore={loadingMore}
+                    message={message}
+                    onSync={syncAll}
+                    onSelectCategory={chooseCategory}
+                    onOpenBookmark={loadBookmarkDetail}
+                    onSearch={search}
+                    onLoadMore={() => refreshBookmarks({ cursor: nextCursor })}
+                  />
+                ) : null}
+                {screen === "categories" ? (
+                  <CategoriesScreen
+                    allCount={allCount}
+                    counts={counts}
+                    categories={categories}
+                    selectedCategory={category}
+                    onSelectCategory={chooseCategory}
+                    onReclassify={reclassifyAll}
+                  />
+                ) : null}
+                {screen === "me" ? (
+                  <MeScreen
+                    user={user}
+                    message={message}
+                    busy={busy}
+                    apiBaseUrl={API_BASE_URL}
+                    onSync={syncAll}
+                    onReclassify={reclassifyAll}
+                    onPrivacy={() => Linking.openURL(PRIVACY_URL)}
+                    onLogout={() => {
+                      Alert.alert("Log out?", "This only removes the local app session.", [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Log out", style: "destructive", onPress: logout },
+                      ]);
+                    }}
+                  />
+                ) : null}
+              </View>
               <BottomNav screen={screen} onChange={setScreen} />
             </View>
           )}
@@ -432,6 +450,7 @@ function FeedScreen(props: {
     <FlatList
       data={props.bookmarks}
       keyExtractor={(item) => item.id}
+      style={styles.feedListView}
       contentContainerStyle={styles.feedList}
       ListHeaderComponent={
         <View>
@@ -724,10 +743,12 @@ function SettingsRow({
 
 function BottomNav({ screen, onChange }: { screen: Screen; onChange: (screen: Screen) => void }) {
   return (
-    <View style={styles.nav}>
-      <NavItem label="Feed" active={screen === "feed"} onPress={() => onChange("feed")} />
-      <NavItem label="Categories" active={screen === "categories"} onPress={() => onChange("categories")} />
-      <NavItem label="Me" active={screen === "me"} onPress={() => onChange("me")} />
+    <View style={styles.navDock}>
+      <View style={styles.nav}>
+        <NavItem label="Feed" active={screen === "feed"} onPress={() => onChange("feed")} />
+        <NavItem label="Categories" active={screen === "categories"} onPress={() => onChange("categories")} />
+        <NavItem label="Me" active={screen === "me"} onPress={() => onChange("me")} />
+      </View>
     </View>
   );
 }
@@ -756,6 +777,10 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
+  },
+  screenBody: {
+    flex: 1,
+    overflow: "hidden",
   },
   login: {
     flex: 1,
@@ -835,8 +860,11 @@ const styles = StyleSheet.create({
     opacity: 0.72,
     transform: [{ scale: 0.99 }],
   },
+  feedListView: {
+    flex: 1,
+  },
   feedList: {
-    paddingBottom: 132,
+    paddingBottom: 28,
     paddingHorizontal: 18,
   },
   feedHeader: {
@@ -1083,7 +1111,7 @@ const styles = StyleSheet.create({
   },
   page: {
     padding: 22,
-    paddingBottom: 132,
+    paddingBottom: 28,
   },
   pageTitle: {
     color: colors.ink,
@@ -1180,21 +1208,22 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 18,
   },
+  navDock: {
+    backgroundColor: colors.paper,
+    paddingBottom: 8,
+    paddingHorizontal: 18,
+    paddingTop: 8,
+  },
   nav: {
     alignItems: "center",
-    alignSelf: "center",
-    backgroundColor: "rgba(255, 248, 234, 0.92)",
+    backgroundColor: colors.card,
     borderColor: colors.ink,
     borderRadius: 999,
     borderWidth: 2,
-    bottom: 18,
     flexDirection: "row",
     gap: 4,
     justifyContent: "space-between",
-    left: 18,
     padding: 8,
-    position: "absolute",
-    right: 18,
   },
   navItem: {
     alignItems: "center",
